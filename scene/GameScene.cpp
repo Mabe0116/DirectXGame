@@ -1,6 +1,9 @@
 #include "GameScene.h"
 #include "TextureManager.h"
 #include <cassert>
+#include "ImGuiManager.h"
+#include "PrimitiveDrawer.h"
+#include "AxisIndicator.h"
 
 GameScene::GameScene() {}
 
@@ -8,6 +11,7 @@ GameScene::~GameScene() {
 	delete sprite_;
 	delete model_;
 	delete player_;
+	delete debugCamera_;
 }
 
 void GameScene::Initialize() {
@@ -28,6 +32,21 @@ void GameScene::Initialize() {
 	viewProjection_.Initialize();
 	player_ = new Player();
 	player_->Initialize(model_,textureHandle_);
+	//サウンドデータの読み込み
+	soundDataHandle_ = audio_->LoadWave("fanfare.wav");
+	//音声再生
+	audio_->PlayWave(soundDataHandle_);
+
+	voiceHandle_ = audio_->PlayWave(soundDataHandle_, true);
+
+	//ライン描画が参照するビュープロジェクションを指定する(アドレス渡し)
+	PrimitiveDrawer::GetInstance()->SetViewProjection(&viewProjection_);
+
+	//デバックカメラの生成
+	debugCamera_ = new DebugCamera(1280, 720);
+
+	AxisIndicator::GetInstance()->SetVisible(true);
+	AxisIndicator::GetInstance()->SetTargetViewProjection(&debugCamera_->GetViewProjection());
 
 }
 
@@ -40,6 +59,29 @@ void GameScene::Update() {
 	//移動した座標をスプライトに反映
 	sprite_->SetPosition(position);
 	player_->Update();
+	//(音声)スペースキーを押した瞬間
+	if (input_->TriggerKey(DIK_SPACE))
+	{
+		//音声再生
+		audio_->StopWave(voiceHandle_);
+	}
+	//デバックテキストの表示
+	ImGui::Text("abe mituki %d.%d.%d", 2050, 12, 31);
+
+	ImGui::Begin("Debug1");
+	ImGui::Text("abe mituki &d.%d.%d", 2050, 12, 31);
+	ImGui::End();
+
+	ImGui::Begin("Debug1");
+	//float3入力ボックス
+	ImGui::InputFloat3("InputFloat3", inputFloat3);
+	//float3スライダー
+	ImGui::SliderFloat3("SliderFloat3", inputFloat3, 0.0f, 1.0f);
+	ImGui::End();
+	//デモウィンドウの表示を有効化
+	ImGui::ShowDemoWindow();
+	//デバックカメラの更新
+	debugCamera_->Update();
 }
 
 void GameScene::Draw() {
@@ -54,7 +96,7 @@ void GameScene::Draw() {
 	/// <summary>
 	/// ここに背景スプライトの描画処理を追加できる
 	/// </summary>
-	/*sprite_->Draw();*/
+	sprite_->Draw();
 
 	// スプライト描画後処理
 	Sprite::PostDraw();
@@ -70,6 +112,7 @@ void GameScene::Draw() {
 	/// ここに3Dオブジェクトの描画処理を追加できる
 	/// </summary>
 	player_->Draw(viewProjection_);
+	model_->Draw(worldTransform_, debugCamera_->GetViewProjection(), textureHandle_);
 
 	//3Dモデル描画
 	model_->Draw(worldTransform_, viewProjection_, textureHandle_);
@@ -88,6 +131,9 @@ void GameScene::Draw() {
 
 	// スプライト描画後処理
 	Sprite::PostDraw();
+
+	//ラインを描画する                         始点座標　　終点座標　　　　   色(RGBA)
+	PrimitiveDrawer::GetInstance()->DrawLine3d({0, 0, 0}, {0, 10, 0}, {1.0f, 0.0f, 0.0f, 1.0f});
 
 #pragma endregion
 }
