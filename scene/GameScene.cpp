@@ -71,6 +71,7 @@ void GameScene::Draw() {
 	/// </summary>
 	player_->Draw(viewProjection_);
 
+
 	//3Dモデル描画
 	model_->Draw(worldTransform_, viewProjection_, textureHandle_);
 
